@@ -203,17 +203,19 @@ class AppIndicator:
 
         if self._config_manager.show_notifications:
             with SQLite() as db:
-                feeds = db.s('SELECT id, title, img FROM feeds WHERE ' +
-                             'feed_url IN (SELECT feed_id FROM posts WHERE ' +
-                             'read="false" GROUP BY feed_id LIMIT 50) ORDER' +
-                             ' BY (SELECT count(feed_id) AS c FROM posts ' +
-                             'WHERE read="false" GROUP BY feed_id ORDER BY ' +
-                             'c desc), UPPER(title)')
+                feeds = db.s('SELECT id, title, img FROM feeds WHERE id IN ' +
+                             '(SELECT feed_id FROM posts WHERE read="false" ' +
+                             'GROUP BY feed_id LIMIT 50) ORDER BY (SELECT ' +
+                             'count(feed_id) AS c FROM posts WHERE ' +
+                             'read="false" GROUP BY feed_id ORDER BY c ' +
+                             'desc), UPPER(title)')
                 for feed in feeds:
-                    img = os.path.join(config.app_cache_dir,
-                                       feed[2]) if feed[2] else None
+                    img = feedindicator.__app_name__
+                    if feed[2]:
+                        img = os.path.join(config.app_cache_dir, feed[2])
                     posts = db.s('SELECT title FROM posts WHERE read=' +
-                                 '"false" AND feed_id=? LIMIT 3', (feed[0],))
+                                 '"false" AND feed_id=? ORDER BY id LIMIT 3',
+                                 (feed[0],))
                     if len(posts) > 0:
                         msg = '\n'.join('* %s' % p[0] for p in posts)
                         self._notify(feed[1], msg, img)
